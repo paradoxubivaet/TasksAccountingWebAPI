@@ -1,0 +1,210 @@
+﻿Таблица с данными соискателей.
+CREATE TABLE Applicants (
+	[ApplicantId]			[INT] IDENTITY(1,1) NOT NULL,
+	[SecondName]			[NVARCHAR](50)		NOT NULL,
+	[FirstName]				[NVARCHAR](50)		NOT NULL,
+	[Patronymic]			[NVARCHAR](50)		NOT NULL,
+	[PhoneNumber]			[NVARCHAR](50)		NOT NULL,
+	[JobTitle]				[NVARCHAR](50)		NOT NULL,
+	[DateFirstInterview]	[DATE]				NOT NULL,
+	[InterviewerSecondName]	[NVARCHAR](50)		NOT NULL,
+	[InterviewerJobTitle]	[NVARCHAR](50)		NOT NULL,
+	[Time]					[DATE]				NOT NULL,
+	[Status]				[NVARCHAR](50)		NULL
+)
+
+
+Таблица с данными для работ
+CREATE TABLE Works (
+	[ApplicantId]			[INT]			NOT NULL,
+	[DateDelivWork]			[DATE]			NULL,
+	[InterviewerSecondName]	[NVARCHAR](50)	NOT NULL,
+	[Grade]					[TINYINT]		NULL,
+	[GradeOverall]			[FLOAT]			NULL
+)
+
+
+
+
+Триггер создания записи в таблице Works.
+CREATE TRIGGER TGR_insert_applicant ON Applicants
+	AFTER INSERT
+AS
+BEGIN
+	INSERT INTO Works(
+						ApplicantId
+					 )
+	SELECT I.ApplicantId
+	FROM inserted I
+END
+
+
+
+
+Процедура обновления оценки(Grade) в таблице Works.
+CREATE PROCEDURE UpdateGradeWorks(
+								@Id INT,
+								@Grade INT,
+								@InterviewerSecondName NVARCHAR(50)
+								)
+AS
+BEGIN
+	UPDATE Works SET Grade = @Grade,
+					 InterviewerSecondName = @InterviewerSecondName
+	WHERE ApplicantId = @Id
+
+	DECLARE @Date DATE =  (	SELECT DateDelivWork FROM Works
+							WHERE ApplicantId = @Id )
+
+	IF(@Date IS NULL)
+	BEGIN
+		UPDATE Works SET DateDelivWork = GETDATE()
+		WHERE ApplicantId = @Id
+
+		EXEC UpdateStatus	@Id = @Id,
+							@Status = N'Сдано'
+	END
+
+	DECLARE @GradeCmn INT = dbo.FT_GetGradeCmn(@Id)
+
+	UPDATE Works SET GradeOverall = @GradeCmn
+	WHERE ApplicantId = @Id
+
+END
+
+
+
+
+Процедура обновления даты таблицы Works
+CREATE PROCEDURE UpdateDateWorks(
+									@Id INT,
+									@Date DATE
+								)
+AS
+BEGIN
+	UPDATE Works SET DateDelivWork = @Date
+	WHERE ApplicantId = @Id
+
+	EXEC UpdateStatus	@Id = @Id,
+						@Status = N'Сдано'
+END
+
+GO
+
+
+
+
+Процедура обновления статуса
+CREATE PROCEDURE UpdateStatus(
+								@Id INT,
+								@Status NVARCHAR(50)
+							)
+AS
+BEGIN
+	UPDATE Applicants SET Status = @Status
+	WHERE ApplicantId = @Id
+END
+
+
+
+
+
+
+Функция расчета оценки.
+CREATE FUNCTION FT_GetGradeCmn(
+								@Id INT
+							  )
+RETURNS FLOAT
+AS 
+BEGIN
+		-- Дата получения задания
+	DECLARE @FirstDate DATE =	(SELECT DateFirstInterview FROM Applicants
+								 WHERE ApplicantId = @Id)
+
+
+	DECLARE @SecondDate DATE =	(SELECT DateDelivWork FROM Works
+								 WHERE ApplicantId = @Id)
+
+	DECLARE @DateDiff INT = DATEDIFF(dd, @FirstDate, @SecondDate)
+	DECLARE @GradeCmn FLOAT = (SELECT Grade FROM Works
+							 WHERE ApplicantId = @Id)/@DateDiff  
+	RETURN @GradeCmn
+END
+
+
+
+
+
+
+Процедура добавления нового пользователя.
+CREATE PROCEDURE AddNewApplicant(
+									@SecondName				[NVARCHAR](50),
+									@FirstName				[NVARCHAR](50),
+									@Patronymic				[NVARCHAR](50),
+									@PhoneNumber			[NVARCHAR](50),
+									@JobTitle				[NVARCHAR](50),
+									@DateFirstInterview		[DATE],
+									@InterviewerSecondName	[NVARCHAR](50),
+									@InterviewerJobTitle	[NVARCHAR](50),
+									@Time					[DATE]
+								) 
+AS
+BEGIN
+	INSERT INTO Applicants(
+							SecondName,
+							FirstName,
+							Patronymic,
+							PhoneNumber,
+							JobTitle,
+							DateFirstInterview,
+							InterviewerSecondName,
+							InterviewerJobTitle,
+							Time,
+							Status
+						  )
+	VALUES	(
+				@SecondName,
+				@FirstName,
+				@Patronymic,
+				@PhoneNumber,
+				@JobTitle,
+				@DateFirstInterview,
+				@InterviewerSecondName,
+				@InterviewerJobTitle,
+				@Time,
+				N'Получено'
+			)
+END
+
+
+Получить отчет со всеми соискателями по дате первого собеседования(Получения задания).
+CREATE PROCEDURE GetReportByDate(
+									@Date DATE
+								)
+AS
+BEGIN
+	SELECT	T1.SecondName,
+			T1.FirstName,
+			T1.Patronymic,
+			T1.JobTitle,
+			T1.Status,
+			T2.GradeOverall
+	FROM Applicants T1
+	INNER JOIN Works T2 ON T1.ApplicantId = T2.ApplicantId
+	WHERE T1.DateFirstInterview = @Date
+END
+
+
+
+Процедура удаления соискателя.
+ALTER PROCEDURE DeleteApplicant(
+							      @Id INT
+							   )
+AS 
+BEGIN
+	DELETE Applicants
+	WHERE ApplicantId = @Id
+
+	DELETE Works
+	WHERE ApplicantId = @Id
+END
