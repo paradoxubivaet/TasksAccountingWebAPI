@@ -1,12 +1,12 @@
 ﻿using System.Data.SqlClient;
+using TableDependency.SqlClient.Base.EventArgs;
+using TasksAccountingWebAPI.DAL.Entities;
 
 namespace TasksAccountingWebAPI.Services
 {
     public interface IObserverService
     {
-        void CreateConnection();
-        void CloseConnection();
         void OnDependencyChange(object sender,
-            SqlNotificationEventArgs e);
+            RecordChangedEventArgs<Applicant> e);
     }
 }

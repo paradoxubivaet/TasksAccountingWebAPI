@@ -11,9 +11,11 @@ builder.Services.Configure<SqlSettings>(builder.Configuration.GetSection("SqlCon
 
 builder.Services.AddSingleton<ISqlSettings>(serviceProvider =>
     serviceProvider.GetRequiredService<IOptions<SqlSettings>>().Value);
-builder.Services.AddHostedService<ObserverService>();
 
-builder.Services.AddScoped(typeof(IRepository), typeof(Repository));
+builder.Services.AddTransient(typeof(IRepository), typeof(Repository));
+
+builder.Services.AddHostedService<StatusObserverService>();
+builder.Services.AddHostedService<DateObserverService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

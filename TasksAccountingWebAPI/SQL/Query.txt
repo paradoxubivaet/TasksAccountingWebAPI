@@ -208,3 +208,14 @@ BEGIN
 	DELETE Works
 	WHERE ApplicantId = @Id
 END
+
+
+Процедура получения ID пользователя и даты получения задания и даты до сдачи.
+CREATE PROCEDURE GetApplicantsDate
+AS
+BEGIN 
+	SELECT	ApplicantId,
+			DateFirstInterview,
+			Time
+	FROM Applicants
+END

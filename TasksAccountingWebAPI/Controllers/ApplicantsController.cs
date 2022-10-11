@@ -51,6 +51,8 @@ namespace TasksAccountingWebAPI.Controllers
         public async Task<ActionResult> UpdateGradeAsync(int id, int grade, string secondName)
         {
             await repository.UpdateGradeWorksAsync(id, grade, secondName);
+            await repository.UpdateStatusAsync(id, "Оценка выставлена сотрудников");
+
             return NoContent();
         }
 

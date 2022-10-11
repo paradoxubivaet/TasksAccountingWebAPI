@@ -44,6 +44,33 @@ namespace TasksAccountingWebAPI.DAL.Repository
             return await Task.FromResult(reports);
         }
 
+        public async Task<IEnumerable<ApplicantDate>> GetApplicantDates()
+        {
+            List<ApplicantDate> dates = new List<ApplicantDate>();
+            using(SqlConnection con = new SqlConnection(connectionString))
+            {
+                con.Open();
+                SqlCommand cmd = new SqlCommand("GetApplicantsDate", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+                SqlDataReader reader = cmd.ExecuteReader();
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        var applicantDates = new ApplicantDate()
+                        {
+                            ApplicantId = reader["ApplicantId"] as int? ?? default(int),
+                            Date = reader["Time"] as DateTime? ?? default(DateTime)
+                        };
+
+                        dates.Add(applicantDates);
+                    }
+                }
+            }
+
+            return await Task.FromResult(dates);
+        }
+
         public async Task AddNewApplicantAsync(Applicant applicant)
         {
             using (SqlConnection con = new SqlConnection(connectionString))
